@@ -49,6 +49,9 @@ func (c *ApiClient) Auth() error {
 	req.SetBasicAuth(c.Username, c.Password)
 	req.Header.Set("Prefer", "persistent-auth")
 	resp, err := c.client.Do(req)
+	if err != nil {
+		return err
+	}
 
 	if resp.StatusCode != 200 {
 		return errors.New(resp.Status)
