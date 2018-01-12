@@ -84,7 +84,7 @@ func (c *Client) Close() {
 	c.client.Do(req)
 }
 
-// SendAndParse sends a request to the API and unmarshalls the respone
+// SendAndParse sends a request to the API and unmarshalls the response
 func (c *Client) SendAndParse(path, method string, res interface{}, body io.Reader) error {
 	b, err := c.SendRequest(path, method, body)
 	if err != nil {
