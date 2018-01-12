@@ -1,4 +1,4 @@
-package ovirt_api
+package api
 
 import "log"
 

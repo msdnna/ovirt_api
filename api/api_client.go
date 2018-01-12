@@ -1,4 +1,4 @@
-package ovirt_api
+package api
 
 import (
 	"crypto/tls"
@@ -13,8 +13,8 @@ import (
 	"io"
 )
 
-// ApiClient encapsulates communication with the oVirt REST API
-type ApiClient struct {
+// Client encapsulates communication with the oVirt REST API
+type Client struct {
 	URL      string
 	Username string
 	Password string
@@ -25,14 +25,14 @@ type ApiClient struct {
 }
 
 // NewClient returns a new client
-func NewClient(url, username, password string, insecureCert bool) (*ApiClient, error) {
+func NewClient(url, username, password string, insecureCert bool) (*Client, error) {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureCert},
 	}
 	c := &http.Client{Transport: tr}
 	logger := &DefaultLogger{}
 
-	client := &ApiClient{URL: url, Username: username, Password: password, client: c, Logger: logger}
+	client := &Client{URL: url, Username: username, Password: password, client: c, Logger: logger}
 	err := client.Auth()
 	if err != nil {
 		return nil, err
@@ -42,7 +42,7 @@ func NewClient(url, username, password string, insecureCert bool) (*ApiClient, e
 }
 
 // Auth establishes a SSO session with oVirt API
-func (c *ApiClient) Auth() error {
+func (c *Client) Auth() error {
 	req, err := http.NewRequest("HEAD", c.URL, nil)
 	if err != nil {
 		return err
@@ -64,17 +64,17 @@ func (c *ApiClient) Auth() error {
 }
 
 // GetAndParse retrieves XML data from the API and unmarshals it
-func (c *ApiClient) GetAndParse(path string, v interface{}) error {
+func (c *Client) GetAndParse(path string, v interface{}) error {
 	return c.SendAndParse(path, "GET", v, nil)
 }
 
 // Get retrieves XML data from the API and returns it
-func (c *ApiClient) Get(path string) ([]byte, error) {
+func (c *Client) Get(path string) ([]byte, error) {
 	return c.SendRequest(path, "GET", nil)
 }
 
 // Close terminates the SSO session with the API
-func (c *ApiClient) Close() {
+func (c *Client) Close() {
 	req, err := http.NewRequest("HEAD", c.URL, nil)
 	if err != nil {
 		return
@@ -85,7 +85,7 @@ func (c *ApiClient) Close() {
 }
 
 // SendAndParse sends a request to the API and unmarshalls the respone
-func (c *ApiClient) SendAndParse(path, method string, res interface{}, body io.Reader) error {
+func (c *Client) SendAndParse(path, method string, res interface{}, body io.Reader) error {
 	b, err := c.SendRequest(path, method, body)
 	if err != nil {
 		return err
@@ -96,7 +96,7 @@ func (c *ApiClient) SendAndParse(path, method string, res interface{}, body io.R
 }
 
 // SendRequest sends a request to the API
-func (c *ApiClient) SendRequest(path, method string, body io.Reader) ([]byte, error) {
+func (c *Client) SendRequest(path, method string, body io.Reader) ([]byte, error) {
 	uri := strings.Trim(c.URL, "/") + "/" + strings.Trim(path, "/")
 	c.Logger.Debug(method, uri)
 
