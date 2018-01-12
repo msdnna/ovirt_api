@@ -15,12 +15,12 @@ import (
 
 // ApiClient encapsulates communication with the oVirt REST API
 type ApiClient struct {
-	Url      string
+	URL      string
 	Username string
 	Password string
 	Logger   Logger
 	Debug    bool
-	cookie  string
+	cookie   string
 	client   *http.Client
 }
 
@@ -32,7 +32,7 @@ func NewClient(url, username, password string, insecureCert bool) (*ApiClient, e
 	c := &http.Client{Transport: tr}
 	logger := &DefaultLogger{}
 
-	client := &ApiClient{Url: url, Username: username, Password: password, client: c, Logger: logger}
+	client := &ApiClient{URL: url, Username: username, Password: password, client: c, Logger: logger}
 	err := client.Auth()
 	if err != nil {
 		return nil, err
@@ -41,8 +41,9 @@ func NewClient(url, username, password string, insecureCert bool) (*ApiClient, e
 	return client, nil
 }
 
+// Auth establishes a SSO session with oVirt API
 func (c *ApiClient) Auth() error {
-	req, err := http.NewRequest("HEAD", c.Url, nil)
+	req, err := http.NewRequest("HEAD", c.URL, nil)
 	if err != nil {
 		return err
 	}
@@ -72,8 +73,9 @@ func (c *ApiClient) Get(path string) ([]byte, error) {
 	return c.SendRequest(path, "GET", nil)
 }
 
+// Close terminates the SSO session with the API
 func (c *ApiClient) Close() {
-	req, err := http.NewRequest("HEAD", c.Url, nil)
+	req, err := http.NewRequest("HEAD", c.URL, nil)
 	if err != nil {
 		return
 	}
@@ -82,6 +84,7 @@ func (c *ApiClient) Close() {
 	c.client.Do(req)
 }
 
+// SendAndParse sends a request to the API and unmarshalls the respone
 func (c *ApiClient) SendAndParse(path, method string, res interface{}, body io.Reader) error {
 	b, err := c.SendRequest(path, method, body)
 	if err != nil {
@@ -92,8 +95,9 @@ func (c *ApiClient) SendAndParse(path, method string, res interface{}, body io.R
 	return err
 }
 
+// SendRequest sends a request to the API
 func (c *ApiClient) SendRequest(path, method string, body io.Reader) ([]byte, error) {
-	uri := strings.Trim(c.Url, "/") + "/" + strings.Trim(path, "/")
+	uri := strings.Trim(c.URL, "/") + "/" + strings.Trim(path, "/")
 	c.Logger.Debug(method, uri)
 
 	req, err := http.NewRequest(method, uri, body)
