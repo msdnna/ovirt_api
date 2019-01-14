@@ -19,3 +19,4 @@
 .vscode
 
 vendor/github.com/imjoey/go-ovirt/examples
+ovirt_exporter
