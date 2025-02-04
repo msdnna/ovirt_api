@@ -2,9 +2,10 @@ package api
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"encoding/xml"
-	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"errors"
@@ -14,17 +15,24 @@ import (
 
 // Client encapsulates communication with the oVirt REST API
 type Client struct {
-	url      string
-	username string
-	password string
-	logger   Logger
-	debug    bool
-	cookie   string
-	client   *http.Client
+	url         string
+	username    string
+	password    string
+	logger      Logger
+	debug       bool
+	accessToken string
+	client      *http.Client
 }
 
 // ClientOption applies options to Client
 type ClientOption func(*Client)
+
+// SSO server response json
+type ssoResponseJSON struct {
+	AccessToken  string `json:"access_token"`
+	SsoError     string `json:"error"`
+	SsoErrorCode string `json:"error_code"`
+}
 
 // WithInsecure disables TLS certificate validation
 func WithInsecure() ClientOption {
@@ -74,23 +82,48 @@ func NewClient(url, username, password string, opts ...ClientOption) (*Client, e
 
 // Auth establishes a SSO session with oVirt API
 func (c *Client) Auth() error {
-	req, err := http.NewRequest("HEAD", c.url, nil)
+	payload := url.Values{}
+
+	payload.Set("grant_type", "password")
+	payload.Set("scope", "ovirt-app-api")
+	payload.Set("username", c.username)
+	payload.Set("password", c.password)
+
+	params := strings.NewReader(payload.Encode())
+	authURL := strings.TrimRight(c.url, "/api/") + "/sso/oauth/token"
+
+	req, err := http.NewRequest("POST", authURL, params)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.client.Do(req)
 	if err != nil {
 		return err
 	}
 
-	req.SetBasicAuth(c.username, c.password)
-	req.Header.Set("Prefer", "persistent-auth")
-	resp, err := c.client.Do(req)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
+	}
+
+	var ssoResp ssoResponseJSON
+	err = json.Unmarshal(body, &ssoResp)
+	if err != nil {
+		return err
+	}
+
+	if ssoResp.SsoError != "" {
+		return errors.New(ssoResp.SsoError)
 	}
 
 	if resp.StatusCode != 200 {
 		return errors.New(resp.Status)
 	}
 
-	c.cookie = strings.Split(resp.Header.Get("Set-Cookie"), ";")[0]
+	c.accessToken = ssoResp.AccessToken
 	return nil
 }
 
@@ -141,8 +174,8 @@ func (c *Client) sendRequest(path, method string, body io.Reader, reauth bool) (
 	}
 
 	req.Header.Add("Content-Type", "application/xml")
-	req.Header.Set("Prefer", "persistent-auth")
-	req.Header.Set("Cookie", c.cookie)
+	req.Header.Set("Accept", "application/xml")
+	req.Header.Set("Authorization", "Bearer "+c.accessToken)
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -161,7 +194,7 @@ func (c *Client) sendRequest(path, method string, body io.Reader, reauth bool) (
 		return nil, fmt.Errorf(resp.Status)
 	}
 
-	b, err := ioutil.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
