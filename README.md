@@ -6,7 +6,7 @@ API connector for oVirt (used by oSnap, ovirt-zero-touch)
 
 ## Install
 ```
-go get -u github.com/czerwonk/ovirt_api
+go get -u github.com/msdnna/ovirt_api
 ```
 
 ## License

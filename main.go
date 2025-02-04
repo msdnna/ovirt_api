@@ -4,7 +4,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/czerwonk/ovirt_api/api"
+	"github.com/msdnna/ovirt_api/api"
 )
 
 func main() {
