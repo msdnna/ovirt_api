@@ -1,2 +1,2 @@
-module github.com/czerwonk/ovirt_api
+module github.com/msdnna/ovirt_api
 
